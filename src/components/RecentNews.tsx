@@ -47,7 +47,7 @@ const RecentProperty: React.FC = () => {
 
                 <div className="flex items-center justify-between mb-[8px] mt-[15px]">
                   <h3 className="!text-lg !mb-0 !text-orange-500">
-                    <Link href={`/dashboard/products`}>{product.title_ar}</Link>
+                    <Link href={`/dashboard/products`}>{product.name_ar}</Link>
                   </h3>
                 </div>
               </SwiperSlide>

@@ -30,7 +30,10 @@ const OrderDetailsPage: React.FC = () => {
 
   const { mutate: updateStatus } = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      updateOrderStatus(id, status as any),
+      updateOrderStatus(
+        id,
+        status as "pending" | "paid" | "shipped" | "delivered" | "cancelled"
+      ),
     onSuccess: () => {
       toast.success("تم تحديث حالة الطلب بنجاح");
       queryClient.invalidateQueries({ queryKey: ["order", orderId] });
@@ -85,32 +88,6 @@ const OrderDetailsPage: React.FC = () => {
       cod: "الدفع عند الاستلام",
     };
     return methodMap[method as keyof typeof methodMap] || method;
-  };
-
-  // Helper function to get payment status display
-  const getPaymentStatusDisplay = (status: string) => {
-    const statusMap = {
-      pending: {
-        text: "في الانتظار",
-        color:
-          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-      },
-      completed: {
-        text: "مكتمل",
-        color:
-          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      },
-      failed: {
-        text: "فشل",
-        color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-      },
-    };
-    return (
-      statusMap[status as keyof typeof statusMap] || {
-        text: status,
-        color: "bg-gray-100 text-gray-800",
-      }
-    );
   };
 
   if (isPending) {

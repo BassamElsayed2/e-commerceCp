@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
 import { useCategories } from "@/components/news/categories/useCategories";
 import { useUpdateCategory } from "@/components/news/categories/useUpdateCategory";
 import { useDeleteCategory } from "@/components/news/categories/useDeleteCategory";
@@ -202,9 +203,11 @@ export default function CategoriesPage() {
                         <div className="flex items-center text-black dark:text-white transition-all hover:text-primary-500">
                           <div className="relative w-[40px] h-[40px]">
                             {cat.image_url ? (
-                              <img
+                              <Image
                                 src={cat.image_url}
                                 alt={cat.name_ar}
+                                width={40}
+                                height={40}
                                 className="w-full h-full object-cover rounded-md"
                               />
                             ) : (
@@ -287,9 +290,11 @@ export default function CategoriesPage() {
                 </label>
                 <div className="flex items-center gap-4">
                   {editImagePreview && (
-                    <img
+                    <Image
                       src={editImagePreview}
                       alt="Preview"
+                      width={96}
+                      height={96}
                       className="w-24 h-24 object-cover rounded-lg shadow-sm"
                     />
                   )}
@@ -389,9 +394,11 @@ export default function CategoriesPage() {
                 </label>
                 <div className="flex items-center gap-4">
                   {newImagePreview && (
-                    <img
+                    <Image
                       src={newImagePreview}
                       alt="Preview"
+                      width={96}
+                      height={96}
                       className="w-24 h-24 object-cover rounded-lg shadow-sm"
                     />
                   )}

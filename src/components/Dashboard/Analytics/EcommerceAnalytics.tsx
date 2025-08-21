@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { getOrders, getOrderStats } from "../../../../services/apiOrders";
 import { getProducts } from "../../../../services/apiProducts";
-import { getUsers, getUserStats } from "../../../../services/apiUsers";
+import { getUserStats } from "../../../../services/apiUsers";
 import dynamic from "next/dynamic";
 import { ApexOptions } from "apexcharts";
 
