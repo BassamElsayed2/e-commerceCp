@@ -43,7 +43,12 @@ export async function getProducts(
   let query = supabase.from("products").select(
     `
       *,
-      attributes:product_attributes(*)
+      attributes:product_attributes(
+        id,
+        product_id,
+        attribute_name,
+        attribute_value
+      )
     `,
     { count: "exact" }
   );
@@ -97,11 +102,38 @@ export async function getProducts(
     throw new Error("تعذر تحميل المنتجات");
   }
 
-  console.log("Debug - Raw products data from getProducts:", products);
-  console.log("Debug - Products count:", count);
+  // معالجة الخصائص لكل منتج
+  const processedProducts = await Promise.all(
+    (products || []).map(async (product) => {
+      let processedAttributes = [];
+
+      if (product.attributes) {
+        if (Array.isArray(product.attributes)) {
+          processedAttributes = product.attributes;
+        } else if (typeof product.attributes === "object") {
+          processedAttributes = Object.values(product.attributes);
+        }
+      }
+
+      // إذا لم تكن هناك خصائص في البيانات، احصل عليها من جدول منفصل
+      if (processedAttributes.length === 0) {
+        const { data: attributesData } = await supabase
+          .from("product_attributes")
+          .select("id, product_id, attribute_name, attribute_value")
+          .eq("product_id", product.id);
+
+        processedAttributes = attributesData || [];
+      }
+
+      return {
+        ...product,
+        attributes: processedAttributes,
+      };
+    })
+  );
 
   return {
-    products: products || [],
+    products: processedProducts,
     total: count ?? 0,
   };
 }
@@ -112,7 +144,12 @@ export async function getProductById(id: string): Promise<Product> {
     .select(
       `
       *,
-      attributes:product_attributes(*)
+      attributes:product_attributes(
+        id,
+        product_id,
+        attribute_name,
+        attribute_value
+      )
     `
     )
     .eq("id", id)
@@ -120,7 +157,34 @@ export async function getProductById(id: string): Promise<Product> {
 
   if (error) throw error;
 
-  return data;
+  // التأكد من أن الخصائص موجودة وصحيحة
+  let processedAttributes = [];
+
+  if (data.attributes) {
+    if (Array.isArray(data.attributes)) {
+      processedAttributes = data.attributes;
+    } else if (typeof data.attributes === "object") {
+      // إذا كانت الخصائص كائن، نحولها إلى مصفوفة
+      processedAttributes = Object.values(data.attributes);
+    }
+  }
+
+  // إذا لم تكن هناك خصائص في البيانات، احصل عليها من جدول منفصل
+  if (processedAttributes.length === 0) {
+    const { data: attributesData } = await supabase
+      .from("product_attributes")
+      .select("id, product_id, attribute_name, attribute_value")
+      .eq("product_id", id);
+
+    processedAttributes = attributesData || [];
+  }
+
+  const product = {
+    ...data,
+    attributes: processedAttributes,
+  };
+
+  return product;
 }
 
 export async function createProduct(productData: Product): Promise<Product> {
@@ -141,7 +205,8 @@ export async function createProduct(productData: Product): Promise<Product> {
   // If there are attributes, create them
   if (attributes && attributes.length > 0) {
     const attributesWithProductId = attributes.map((attr) => ({
-      ...attr,
+      attribute_name: attr.attribute_name,
+      attribute_value: attr.attribute_value,
       product_id: createdProduct.id,
     }));
 
@@ -154,7 +219,13 @@ export async function createProduct(productData: Product): Promise<Product> {
     }
   }
 
-  return createdProduct;
+  // إرجاع المنتج مع الخصائص
+  const finalProduct = {
+    ...createdProduct,
+    attributes: attributes || [],
+  };
+
+  return finalProduct;
 }
 
 export async function uploadProductImage(
@@ -265,12 +336,20 @@ export async function updateProduct(
   // If there are attributes to update, handle them
   if (attributes !== undefined) {
     // Delete existing attributes
-    await supabase.from("product_attributes").delete().eq("product_id", id);
+    const { error: deleteError } = await supabase
+      .from("product_attributes")
+      .delete()
+      .eq("product_id", id);
+
+    if (deleteError) {
+      console.error("خطأ في حذف الخصائص القديمة:", deleteError);
+    }
 
     // Insert new attributes
-    if (attributes.length > 0) {
+    if (attributes && attributes.length > 0) {
       const attributesWithProductId = attributes.map((attr) => ({
-        ...attr,
+        attribute_name: attr.attribute_name || "",
+        attribute_value: attr.attribute_value || "",
         product_id: id,
       }));
 
@@ -284,5 +363,25 @@ export async function updateProduct(
     }
   }
 
-  return data;
+  // إرجاع المنتج مع الخصائص المحدثة
+  let finalAttributes = [];
+
+  if (attributes !== undefined) {
+    finalAttributes = attributes;
+  } else {
+    // إذا لم يتم تمرير خصائص، احصل على الخصائص الحالية من قاعدة البيانات
+    const { data: currentAttributes } = await supabase
+      .from("product_attributes")
+      .select("id, product_id, attribute_name, attribute_value")
+      .eq("product_id", id);
+
+    finalAttributes = currentAttributes || [];
+  }
+
+  const finalProduct = {
+    ...data,
+    attributes: finalAttributes,
+  };
+
+  return finalProduct;
 }

@@ -78,7 +78,7 @@ export default function EditProductPage() {
   //get categories
   const { data: categories } = useCategories();
 
-  const { data: product } = useQuery({
+  const { data: product, isLoading } = useQuery({
     queryKey: ["product", id],
     queryFn: () => {
       if (!id) throw new Error("No ID provided");
@@ -106,8 +106,17 @@ export default function EditProductPage() {
         setServerImages(product.image_url);
       }
 
-      if (product.attributes) {
+      // تحسين تحميل الخصائص
+      if (product.attributes && Array.isArray(product.attributes)) {
         setAttributes(product.attributes);
+      } else if (product.attributes && typeof product.attributes === "object") {
+        // إذا كانت الخصائص كائن وليس مصفوفة، نحولها إلى مصفوفة
+        const attributesArray = Object.values(
+          product.attributes
+        ) as ProductAttribute[];
+        setAttributes(attributesArray);
+      } else {
+        setAttributes([]);
       }
     }
   }, [product, reset]);
@@ -124,10 +133,11 @@ export default function EditProductPage() {
       attribute_name: "",
       attribute_value: "",
     };
-    setAttributes([...attributes, newAttribute]);
+    setAttributes([...(attributes || []), newAttribute]);
   };
 
   const removeAttribute = (index: number) => {
+    if (!attributes) return;
     setAttributes(attributes.filter((_, i) => i !== index));
   };
 
@@ -136,6 +146,8 @@ export default function EditProductPage() {
     field: keyof ProductAttribute,
     value: string
   ) => {
+    if (!attributes) return;
+
     const updatedAttributes = [...attributes];
     updatedAttributes[index] = { ...updatedAttributes[index], [field]: value };
     setAttributes(updatedAttributes);
@@ -159,13 +171,11 @@ export default function EditProductPage() {
       const updatedData: Partial<Product> = {
         ...data,
         image_url: uploadedImageUrl ? [uploadedImageUrl] : serverImages,
-        attributes: attributes,
+        attributes: attributes || [],
       };
 
       // تنفيذ التحديث في Supabase
-      const updated = await updateProduct(id, updatedData);
-
-      console.log("تم تحديث المنتج بنجاح:", updated);
+      await updateProduct(id, updatedData);
 
       // يمكنك هنا إعادة التوجيه أو عرض رسالة نجاح
       toast.success("تم تحديث المنتج بنجاح");
@@ -179,6 +189,31 @@ export default function EditProductPage() {
       setIsUploadingImage(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">
+            جاري تحميل بيانات المنتج...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-red-600 dark:text-red-400">
+            لم يتم العثور على المنتج
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -483,6 +518,9 @@ export default function EditProductPage() {
           <div className="trezo-card-header mb-[20px] md:mb-[25px] flex items-center justify-between">
             <div className="trezo-card-title">
               <h5 className="!mb-0">خصائص المنتج</h5>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                ({attributes ? attributes.length : 0} خاصية)
+              </span>
             </div>
             <button
               type="button"
@@ -495,72 +533,73 @@ export default function EditProductPage() {
           </div>
 
           <div className="trezo-card-content">
-            {attributes.length === 0 ? (
+            {!attributes || attributes.length === 0 ? (
               <p className="text-gray-500 dark:text-gray-400 text-center py-8">
                 لا توجد خصائص للمنتج. اضغط على &quot;إضافة خاصية&quot; لإضافة
                 خاصية جديدة.
               </p>
             ) : (
               <div className="space-y-4">
-                {attributes.map((attribute, index) => (
-                  <div
-                    key={index}
-                    className="border border-gray-200 dark:border-[#172036] rounded-md p-4"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h6 className="text-black dark:text-white font-medium">
-                        خاصية {index + 1}
-                      </h6>
-                      <button
-                        type="button"
-                        onClick={() => removeAttribute(index)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <i className="material-symbols-outlined">delete</i>
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="mb-[10px] text-black dark:text-white font-medium block">
-                          اسم الخاصية
-                        </label>
-                        <input
-                          type="text"
-                          className="h-[45px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                          placeholder="مثل: اللون، الحجم، المادة"
-                          value={attribute.attribute_name}
-                          onChange={(e) =>
-                            updateAttribute(
-                              index,
-                              "attribute_name",
-                              e.target.value
-                            )
-                          }
-                        />
+                {attributes &&
+                  attributes.map((attribute, index) => (
+                    <div
+                      key={index}
+                      className="border border-gray-200 dark:border-[#172036] rounded-md p-4"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h6 className="text-black dark:text-white font-medium">
+                          خاصية {index + 1}
+                        </h6>
+                        <button
+                          type="button"
+                          onClick={() => removeAttribute(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <i className="material-symbols-outlined">delete</i>
+                        </button>
                       </div>
 
-                      <div>
-                        <label className="mb-[10px] text-black dark:text-white font-medium block">
-                          قيمة الخاصية
-                        </label>
-                        <input
-                          type="text"
-                          className="h-[45px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
-                          placeholder="مثل: أحمر، كبير، قطن"
-                          value={attribute.attribute_value}
-                          onChange={(e) =>
-                            updateAttribute(
-                              index,
-                              "attribute_value",
-                              e.target.value
-                            )
-                          }
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="mb-[10px] text-black dark:text-white font-medium block">
+                            اسم الخاصية
+                          </label>
+                          <input
+                            type="text"
+                            className="h-[45px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
+                            placeholder="مثل: اللون، الحجم، المادة"
+                            value={attribute?.attribute_name || ""}
+                            onChange={(e) =>
+                              updateAttribute(
+                                index,
+                                "attribute_name",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-[10px] text-black dark:text-white font-medium block">
+                            قيمة الخاصية
+                          </label>
+                          <input
+                            type="text"
+                            className="h-[45px] rounded-md text-black dark:text-white border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-primary-500"
+                            placeholder="مثل: أحمر، كبير، قطن"
+                            value={attribute?.attribute_value || ""}
+                            onChange={(e) =>
+                              updateAttribute(
+                                index,
+                                "attribute_value",
+                                e.target.value
+                              )
+                            }
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>

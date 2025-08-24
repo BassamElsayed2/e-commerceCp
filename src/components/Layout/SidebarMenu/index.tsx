@@ -187,18 +187,6 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({ toggleActive }) => {
                   <ul className="sidebar-sub-menu">
                     <li className="sidemenu-item mb-[4px] last:mb-0">
                       <Link
-                        href="/dashboard/site-settings/"
-                        className={`sidemenu-link rounded-md flex items-center relative transition-all font-medium text-gray-500 dark:text-gray-400 py-[9px] ltr:pl-[38px] ltr:pr-[30px] rtl:pr-[38px] rtl:pl-[30px] hover:text-primary-500 hover:bg-primary-50 w-full text-left dark:hover:bg-[#15203c] ${
-                          pathname === "/dashboard/site-settings/"
-                            ? "active"
-                            : ""
-                        }`}
-                      >
-                        إعدادات الصفحة
-                      </Link>
-                    </li>
-                    <li className="sidemenu-item mb-[4px] last:mb-0">
-                      <Link
                         href="/dashboard/my-profile/edit/"
                         className={`sidemenu-link rounded-md flex items-center relative transition-all font-medium text-gray-500 dark:text-gray-400 py-[9px] ltr:pl-[38px] ltr:pr-[30px] rtl:pr-[38px] rtl:pl-[30px] hover:text-primary-500 hover:bg-primary-50 w-full text-left dark:hover:bg-[#15203c] ${
                           pathname === "/dashboard/my-profile/edit/"
